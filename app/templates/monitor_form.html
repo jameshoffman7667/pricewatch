@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{% if monitor %}Edit{% else %}New{% endif %} Monitor - PriceWatch{% endblock %}
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0">{% if monitor %}Edit monitor{% else %}New monitor{% endif %}</h2>
+  <form method="post" action="{% if monitor %}/monitors/{{ monitor.id }}/edit{% else %}/monitors{% endif %}">
+    <div class="row">
+      <div>
+        <label>Name</label>
+        <input name="name" value="{{ monitor.name if monitor else '' }}" placeholder="e.g. Sony WH-1000XM6 @ Amazon">
+      </div>
+      <div>
+        <label>URL</label>
+        <input name="url" required value="{{ monitor.url if monitor else '' }}" placeholder="https://example.com/product/123">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Selector type</label>
+        <select name="selector_type">
+          {% set st = monitor.selector_type if monitor else 'auto' %}
+          <option value="auto" {% if st=='auto' %}selected{% endif %}>Auto-detect price (recommended)</option>
+          <option value="css" {% if st=='css' %}selected{% endif %}>CSS selector</option>
+          <option value="regex" {% if st=='regex' %}selected{% endif %}>Regex on raw HTML</option>
+        </select>
+      </div>
+      <div>
+        <label>Selector / regex (optional)</label>
+        <input name="selector" value="{{ monitor.selector if monitor else '' }}" placeholder=".price, #priceblock_ourprice, etc.">
+      </div>
+    </div>
+
+    <label>Extra regex to apply to matched text (optional)</label>
+    <input name="extra_regex" value="{{ monitor.extra_regex if monitor else '' }}" placeholder="e.g. \d+[.,]\d{2}">
+
+    <div class="checkbox-row">
+      <input type="checkbox" name="render_js" id="render_js" {% if monitor and monitor.render_js %}checked{% endif %}>
+      <label for="render_js" style="margin:0;">Render with headless browser (for JavaScript-heavy sites)</label>
+    </div>
+    <label>Wait for selector before reading (JS mode only, optional)</label>
+    <input name="wait_for_selector" value="{{ monitor.wait_for_selector if monitor else '' }}">
+
+    <div class="checkbox-row">
+      <input type="checkbox" name="capture_screenshot" id="capture_screenshot" {% if monitor and monitor.capture_screenshot %}checked{% endif %}>
+      <label for="capture_screenshot" style="margin:0;">Capture full-page screenshot each check (JS mode only)</label>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Check interval (minutes)</label>
+        <input type="number" min="1" name="interval_minutes" value="{{ monitor.interval_minutes if monitor else 60 }}">
+      </div>
+      <div>
+        <label>Target price (alert when price drops to/below this)</label>
+        <input type="number" step="0.01" name="target_price" value="{{ monitor.target_price if monitor and monitor.target_price is not none else '' }}">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Minimum % change to notify</label>
+        <input type="number" step="0.1" name="min_change_percent" value="{{ monitor.min_change_percent if monitor else 0 }}">
+      </div>
+      <div>
+        <label>Minimum $ change to notify</label>
+        <input type="number" step="0.01" name="min_change_absolute" value="{{ monitor.min_change_absolute if monitor else 0 }}">
+      </div>
+    </div>
+
+    <div class="checkbox-row">
+      <input type="checkbox" name="notify_on_price_drop" id="npd" {% if not monitor or monitor.notify_on_price_drop %}checked{% endif %}>
+      <label for="npd" style="margin:0;">Notify on price drop</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" name="notify_on_price_rise" id="npr" {% if monitor and monitor.notify_on_price_rise %}checked{% endif %}>
+      <label for="npr" style="margin:0;">Notify on price rise</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" name="notify_on_any_change" id="noc" {% if not monitor or monitor.notify_on_any_change %}checked{% endif %}>
+      <label for="noc" style="margin:0;">Notify on any content change (when no price is detected)</label>
+    </div>
+    <div class="checkbox-row">
+      <input type="hidden" name="enabled" value="false">
+      <input type="checkbox" name="enabled" id="enabled" value="true" {% if not monitor or monitor.enabled %}checked{% endif %}>
+      <label for="enabled" style="margin:0;">Enabled</label>
+    </div>
+
+    <div class="actions">
+      <button class="btn" type="submit">{% if monitor %}Save changes{% else %}Create monitor{% endif %}</button>
+      <a class="btn secondary" href="{% if monitor %}/monitors/{{ monitor.id }}{% else %}/{% endif %}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

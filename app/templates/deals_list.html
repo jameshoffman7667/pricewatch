@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Deals - PriceWatch{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h2 style="margin:0">RedFlagDeals - Hot Deals</h2>
+    {% if tab == 'unread' and deals %}
+    <form method="post" action="/deals/mark-all-read?tab={{ tab }}">
+      <button class="btn small secondary" type="submit">Mark all visible read</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="tabs" style="margin-top:16px">
+    <a href="/deals?tab=unread" class="{{ 'active' if tab == 'unread' }}">Unread ({{ counts.unread }})</a>
+    <a href="/deals?tab=read" class="{{ 'active' if tab == 'read' }}">Read ({{ counts.read }})</a>
+    <a href="/deals?tab=favourited" class="{{ 'active' if tab == 'favourited' }}">Favourited ({{ counts.favourited }})</a>
+  </div>
+
+  {% if not deals %}
+  <div class="empty">
+    <p>Nothing here yet.</p>
+    {% if tab == 'unread' %}<p class="muted">New Hot Deals threads are polled from RFD every few minutes.</p>{% endif %}
+  </div>
+  {% else %}
+  {% for d in deals %}
+  <div class="deal-row">
+    {% if d.thumbnail_url %}<img class="thumb" src="{{ d.thumbnail_url }}" alt="">{% else %}<div class="thumb"></div>{% endif %}
+    <div class="title">
+      <a href="/deals/{{ d.id }}">{% if d.retailer %}<span class="muted">[{{ d.retailer }}]</span> {% endif %}{{ d.title }}</a>
+      <div class="muted">
+        {{ d.posted_at.strftime("%Y-%m-%d %H:%M") if d.posted_at else "" }}
+        {% if d.vote_score is not none %} · score {{ d.vote_score }}{% endif %}
+        {% if d.ai_summary %} · <span style="color:var(--good)">AI summary ready</span>{% endif %}
+      </div>
+    </div>
+    <div class="deal-price">
+      {% if d.price is not none %}${{ "%.2f"|format(d.price) }}{% endif %}
+      {% if d.original_price is not none %}<span class="orig">${{ "%.2f"|format(d.original_price) }}</span>{% endif %}
+    </div>
+    <form class="inline" method="post" action="/deals/{{ d.id }}/favourite?tab={{ tab }}">
+      <button class="star-btn {{ 'on' if d.favourited }}" type="submit" title="Favourite">{{ "★" if d.favourited else "☆" }}</button>
+    </form>
+    {% if tab != 'read' %}
+    <form class="inline" method="post" action="/deals/{{ d.id }}/read?tab={{ tab }}">
+      <input type="hidden" name="read" value="true">
+      <button class="btn small secondary" type="submit">Mark read</button>
+    </form>
+    {% else %}
+    <form class="inline" method="post" action="/deals/{{ d.id }}/read?tab={{ tab }}">
+      <input type="hidden" name="read" value="false">
+      <button class="btn small secondary" type="submit">Mark unread</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

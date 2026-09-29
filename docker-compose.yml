@@ -1,0 +1,35 @@
+# Production deployment: pulls the pre-built image from Docker Hub
+# (mybadreligon/pricewatch). This is the file to paste into Dockhand (or
+# any docker-compose-based app manager) - no build step, no source
+# checkout required.
+#
+# Configuration is via the variables below or a sibling .env file -
+# see .env.example for the full list with comments.
+services:
+  pricewatch:
+    image: ${PRICEWATCH_IMAGE:-mybadreligon/pricewatch}:${PRICEWATCH_TAG:-latest}
+    container_name: pricewatch
+    restart: unless-stopped
+    ports:
+      - "${PRICEWATCH_PORT:-8000}:8000"
+    volumes:
+      - pricewatch_data:/data
+    environment:
+      - PRICEWATCH_DATA_DIR=/data
+      - TZ=${TZ:-UTC}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+volumes:
+  pricewatch_data:
+    # Swap for a bind mount if you want the DB/screenshots on a specific
+    # host path instead of a named Docker volume, e.g.:
+    # driver: local
+    # driver_opts:
+    #   type: none
+    #   o: bind
+    #   device: /path/on/host/pricewatch-data

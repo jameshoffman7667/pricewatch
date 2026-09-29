@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ monitor.name }} - PriceWatch{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+      <h2 style="margin:0 0 4px 0">{{ monitor.name }}</h2>
+      <a href="{{ monitor.url }}" target="_blank" class="muted">{{ monitor.url }}</a>
+    </div>
+    <div class="actions" style="margin-top:0">
+      <form class="inline" method="post" action="/monitors/{{ monitor.id }}/check-now">
+        <button class="btn small secondary" type="submit">Check now</button>
+      </form>
+      <form class="inline" method="post" action="/monitors/{{ monitor.id }}/toggle">
+        <button class="btn small secondary" type="submit">{{ "Pause" if monitor.enabled else "Resume" }}</button>
+      </form>
+      <a class="btn small secondary" href="/monitors/{{ monitor.id }}/edit">Edit</a>
+      <form class="inline" method="post" action="/monitors/{{ monitor.id }}/delete" onsubmit="return confirm('Delete this monitor and all its history?');">
+        <button class="btn small danger" type="submit">Delete</button>
+      </form>
+    </div>
+  </div>
+
+  {% if monitor.last_price is not none %}
+  <div class="price">${{ "%.2f"|format(monitor.last_price) }}</div>
+  {% endif %}
+  <p class="muted">
+    Checked every {{ monitor.interval_minutes }} min ·
+    Last checked: {{ monitor.last_checked_at.strftime("%Y-%m-%d %H:%M UTC") if monitor.last_checked_at else "never" }} ·
+    Status: {{ monitor.last_status or "pending" }}
+    {% if monitor.last_error %} · <span style="color:var(--bad)">{{ monitor.last_error }}</span>{% endif %}
+  </p>
+
+  <canvas id="priceChart" height="80"></canvas>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">History</h3>
+  <table>
+    <thead><tr><th>Time (UTC)</th><th>Price</th><th>Status</th><th>Notified</th></tr></thead>
+    <tbody>
+    {% for s in snapshots %}
+      <tr>
+        <td>{{ s.checked_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        <td>{% if s.price is not none %}${{ "%.2f"|format(s.price) }}{% else %}-{% endif %}</td>
+        <td>
+          {% if s.status == 'error' %}<span class="pill error">error: {{ s.error }}</span>
+          {% elif s.changed %}<span class="pill changed">changed</span>
+          {% else %}<span class="pill ok">unchanged</span>{% endif %}
+        </td>
+        <td>{{ "🔔" if s.notified else "" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+  const history = {{ history_json|safe }};
+  const ctx = document.getElementById('priceChart');
+  if (history.length > 0 && window.Chart) {
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: history.map(h => h.t),
+        datasets: [{
+          label: 'Price',
+          data: history.map(h => h.price),
+          borderColor: '#4f8cff',
+          backgroundColor: 'rgba(79,140,255,.15)',
+          tension: 0.2,
+          fill: true,
+          pointRadius: 2,
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#8b93a1' }, grid: { color: '#262c35' } },
+          y: { ticks: { color: '#8b93a1' }, grid: { color: '#262c35' } }
+        }
+      }
+    });
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Monitors - PriceWatch{% endblock %}
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0">Monitors <span class="muted">({{ monitors|length }} - no limit)</span></h2>
+  {% if not monitors %}
+  <div class="empty">
+    <p>No monitors yet.</p>
+    <a class="btn" href="/monitors/new">Watch your first page</a>
+  </div>
+  {% else %}
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Price</th><th>Status</th><th>Interval</th><th>Last checked</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for m in monitors %}
+      <tr>
+        <td><a href="/monitors/{{ m.id }}">{{ m.name }}</a><br><span class="muted">{{ m.url[:60] }}{% if m.url|length > 60 %}...{% endif %}</span></td>
+        <td>{% if m.last_price is not none %}${{ "%.2f"|format(m.last_price) }}{% else %}-{% endif %}</td>
+        <td>
+          {% if not m.enabled %}<span class="pill off">paused</span>
+          {% elif m.last_status == 'error' %}<span class="pill error">error</span>
+          {% elif m.last_status == 'changed' %}<span class="pill changed">changed</span>
+          {% elif m.last_status %}<span class="pill ok">ok</span>
+          {% else %}<span class="pill off">pending</span>{% endif %}
+        </td>
+        <td>{{ m.interval_minutes }} min</td>
+        <td class="muted">{{ m.last_checked_at.strftime("%Y-%m-%d %H:%M UTC") if m.last_checked_at else "never" }}</td>
+        <td>
+          <form class="inline" method="post" action="/monitors/{{ m.id }}/check-now">
+            <button class="btn small secondary" type="submit">Check now</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

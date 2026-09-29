@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Notifications - PriceWatch{% endblock %}
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0">Notification channels</h2>
+  <p class="muted">
+    Powered by <a href="https://github.com/caronc/apprise" target="_blank">Apprise</a> - 80+ free services
+    (email, Slack, Discord, Telegram, ntfy, Pushover, generic webhooks, ...). See the
+    <a href="https://github.com/caronc/apprise#supported-notifications" target="_blank">URL format docs</a>.
+  </p>
+  <table>
+    <thead><tr><th>Name</th><th>URL</th><th>Enabled</th><th></th></tr></thead>
+    <tbody>
+    {% for c in channels %}
+      <tr>
+        <td>{{ c.name }}</td>
+        <td><code>{{ c.apprise_url[:50] }}{% if c.apprise_url|length>50 %}...{% endif %}</code></td>
+        <td>{{ "yes" if c.enabled else "no" }}</td>
+        <td>
+          <form class="inline" method="post" action="/channels/{{ c.id }}/test">
+            <button class="btn small secondary" type="submit">Test</button>
+          </form>
+          <form class="inline" method="post" action="/channels/{{ c.id }}/delete" onsubmit="return confirm('Delete?');">
+            <button class="btn small danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0">Add a channel</h3>
+  <form method="post" action="/channels">
+    <label>Name</label>
+    <input name="name" placeholder="e.g. Team Slack">
+    <label>Apprise URL</label>
+    <input name="apprise_url" required placeholder="e.g. mailtos://user:pass@gmail.com, slack://tokenA/tokenB/tokenC, discord://webhook_id/webhook_token">
+    <div class="actions">
+      <button class="btn" type="submit">Add channel</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
