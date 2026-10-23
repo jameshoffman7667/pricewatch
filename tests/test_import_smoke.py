@@ -265,6 +265,12 @@ def test_rfd_jobs_wired_into_startup():
     assert "rfd_jobs.run_summary_refresh_job" in src
 
 
+def test_healthz_body_is_status_ok_and_image_version():
+    body = app.main.healthz()
+    version = open(os.path.join(os.path.dirname(__file__), "..", "VERSION")).read().strip()
+    assert body == {"status": "ok", "version": version}
+
+
 if __name__ == "__main__":
     test_app_object_exists()
     print("PASS test_app_object_exists")
@@ -272,4 +278,6 @@ if __name__ == "__main__":
     print("PASS test_expected_routes_are_defined_as_module_functions")
     test_rfd_jobs_wired_into_startup()
     print("PASS test_rfd_jobs_wired_into_startup")
-    print("\n3 passed, 0 failed")
+    test_healthz_body_is_status_ok_and_image_version()
+    print("PASS test_healthz_body_is_status_ok_and_image_version")
+    print("\n4 passed, 0 failed")

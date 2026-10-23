@@ -1,11 +1,11 @@
-# PriceWatch - Functional Specification (current state, v0.1.0)
+# PriceWatch - Functional Specification (current state, v0.1.1)
 
 ## 1. Purpose
 A single-user, self-hosted Docker app that monitors product prices and page changes without paid-tier limits, and tracks new RedFlagDeals (RFD) Hot Deals posts.
 
 ## 2. Runtime
 - One image `mybadreligon/pricewatch`; FastAPI app served by uvicorn on `$PORT` (dev default 5400; host port assigned from the server port register).
-- `GET /healthz` checks the database and returns `{status, version}` (503 `{status: "error"}` if the database is unreachable).
+- `GET /healthz` on `$PORT`: no login, no private data, no calls to outside services. Returns `{"status":"ok","version":"<VERSION = image tag>"}`; it only touches the local SQLite file and answers 503 `{"status":"error",...}` if that fails. Image `HEALTHCHECK` and the compose healthcheck both call it on `127.0.0.1:$PORT` with a 30 second start period.
 - Version comes from the `VERSION` file (also shown in the API docs title metadata).
 - Data in `/data` (SQLite `pricewatch.db`, `screenshots/`). Container runs as UID 1000 / GID 100 under `tini`.
 - Env vars: `PORT`, `PRICEWATCH_DATA_DIR`, `TZ`. No authentication (single user, trusted network or protect the hostname with Cloudflare Access).

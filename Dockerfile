@@ -36,7 +36,7 @@ VOLUME ["/data"]
 
 EXPOSE 5400
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD wget -qO- http://127.0.0.1:${PORT}/healthz >/dev/null || exit 1
 
 ENTRYPOINT ["/usr/bin/tini", "--"]

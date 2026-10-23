@@ -473,7 +473,8 @@ def api_delete_monitor(monitor_id: int):
 
 @app.get("/healthz")
 def healthz():
-    # Cheap DB reachability check; returns {status, version} per the home server spec.
+    # Unauthenticated, no private data, no outside services: only a local SQLite ping.
+    # Body is exactly {status, version}; version equals the image tag (VERSION file).
     try:
         with Session(engine) as session:
             session.exec(select(NotificationChannel).limit(1)).first()

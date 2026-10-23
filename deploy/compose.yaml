@@ -1,6 +1,6 @@
 services:
   pricewatch:
-    image: mybadreligon/pricewatch:0.1.0
+    image: mybadreligon/pricewatch:0.1.1
     container_name: pricewatch
     restart: unless-stopped
     user: "1000:100"
@@ -17,7 +17,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      start_period: 30s
     stop_grace_period: 15s
     logging:
       driver: json-file

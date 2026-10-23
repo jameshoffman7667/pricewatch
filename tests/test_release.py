@@ -34,6 +34,12 @@ def test_dockerfile_follows_port_and_runs_non_root():
     assert "# syntax" not in d
 
 
+def test_health_start_period_is_30s_in_image_and_compose():
+    assert "--start-period=30s" in _read("Dockerfile")
+    assert "start_period: 30s" in _read("deploy/compose.yaml")
+    assert "/healthz" in _read("deploy/compose.yaml") and "$${PORT}" in _read("deploy/compose.yaml")
+
+
 def test_healthz_returns_version():
     main = _read("app/main.py")
     assert '"version": __version__' in main
