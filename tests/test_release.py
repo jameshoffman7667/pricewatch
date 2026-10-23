@@ -40,6 +40,16 @@ def test_health_start_period_is_30s_in_image_and_compose():
     assert "/healthz" in _read("deploy/compose.yaml") and "$${PORT}" in _read("deploy/compose.yaml")
 
 
+def test_release_workflow_triggers_on_main_version_push_without_tag_push():
+    w = _read(".github/workflows/release.yml")
+    assert 'branches: ["main"]' in w and '- "VERSION"' in w and '- "package.json"' in w
+    assert 'tags: ["v*.*.*"]' in w  # manual fallback only
+    assert "contents: write" in w
+    assert 'gh release create "v$VERSION" --target "$GITHUB_SHA"' in w
+    assert "group: release" in w and "cancel-in-progress: false" in w
+    assert "refs/tags/v$VERSION" in w  # fails when the tag already exists
+
+
 def test_healthz_returns_version():
     main = _read("app/main.py")
     assert '"version": __version__' in main

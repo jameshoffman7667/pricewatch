@@ -1,14 +1,31 @@
 name: release
+
+# Primary trigger: a push to main that changes the version file. The job reads
+# the version, builds and pushes the image, then `gh release create --target`
+# creates the vX.Y.Z tag and the GitHub release itself, so nobody pushes a tag.
+# The v*.*.* tag trigger is a manual fallback only (path filters do not apply
+# to tag pushes). Both paths share one concurrency group and refuse to release
+# a version that already has a tag or release, so a version is built once.
 on:
   push:
+    branches: ["main"]
+    paths:
+      - "VERSION"
+      - "package.json"
     tags: ["v*.*.*"]
 
 permissions:
   contents: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
   image:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
 
@@ -16,9 +33,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "Tag version: $VERSION"
-          # version file must match the tag (adjust for the app's language)
+          # version file (adjust for the app's language)
           if [ -f package.json ]; then
             FILE_VERSION="$(node -p "require('./package.json').version")"
           elif [ -f VERSION ]; then
@@ -26,7 +41,21 @@ jobs:
           else
             echo "No version file"; exit 1
           fi
-          [ "$FILE_VERSION" = "$VERSION" ] || { echo "Version file ($FILE_VERSION) != tag ($VERSION)"; exit 1; }
+          [[ "$FILE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Version '$FILE_VERSION' is not MAJOR.MINOR.PATCH"; exit 1; }
+          VERSION="$FILE_VERSION"
+          echo "Version: $VERSION (event: $GITHUB_EVENT_NAME, ref: $GITHUB_REF)"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            # manual fallback: the pushed tag must equal the version file
+            [ "$GITHUB_REF_NAME" = "v$VERSION" ] || { echo "Tag $GITHUB_REF_NAME != version file v$VERSION"; exit 1; }
+            if gh release view "v$VERSION" >/dev/null 2>&1; then
+              echo "Release v$VERSION already exists; it was already built"; exit 1
+            fi
+          else
+            # normal path: the tag must not exist yet
+            if git ls-remote --exit-code --tags origin "refs/tags/v$VERSION" >/dev/null 2>&1; then
+              echo "Tag v$VERSION already exists; bump the version"; exit 1
+            fi
+          fi
           # changelog must contain this version with Short <= 50 and Long <= 250 chars
           grep -q "^## v$VERSION " CHANGELOG.md || { echo "CHANGELOG.md has no entry for v$VERSION"; exit 1; }
           SHORT="$(awk -v v="## v$VERSION " 'index($0,v)==1{f=1;next} f&&/^\*\*Short:\*\*/{sub(/^\*\*Short:\*\* /,"");print;exit}' CHANGELOG.md)"
@@ -48,8 +77,8 @@ jobs:
         with:
           images: mybadreligon/${{ github.event.repository.name }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=v${{ env.VERSION }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ env.VERSION }}
             type=raw,value=latest
           labels: |
             org.opencontainers.image.version=${{ env.VERSION }}
@@ -65,6 +94,8 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: GitHub release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME - $SHORT" --notes-file <(awk -v v="## $GITHUB_REF_NAME " 'index($0,v)==1{f=1;next} f&&/^## v/{exit} f' CHANGELOG.md)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Creates the vX.Y.Z tag at this commit when it does not exist yet.
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION - $SHORT" --notes-file <(awk -v v="## v$VERSION " 'index($0,v)==1{f=1;next} f&&/^## v/{exit} f' CHANGELOG.md)

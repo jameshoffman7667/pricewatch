@@ -1,6 +1,6 @@
 services:
   pricewatch:
-    image: mybadreligon/pricewatch:0.1.1
+    image: mybadreligon/pricewatch:0.1.2
     container_name: pricewatch
     restart: unless-stopped
     user: "1000:100"

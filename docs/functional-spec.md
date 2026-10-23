@@ -1,4 +1,4 @@
-# PriceWatch - Functional Specification (current state, v0.1.1)
+# PriceWatch - Functional Specification (current state, v0.1.2)
 
 ## 1. Purpose
 A single-user, self-hosted Docker app that monitors product prices and page changes without paid-tier limits, and tracks new RedFlagDeals (RFD) Hot Deals posts.
@@ -9,7 +9,7 @@ A single-user, self-hosted Docker app that monitors product prices and page chan
 - Version comes from the `VERSION` file (also shown in the API docs title metadata).
 - Data in `/data` (SQLite `pricewatch.db`, `screenshots/`). Container runs as UID 1000 / GID 100 under `tini`.
 - Env vars: `PORT`, `PRICEWATCH_DATA_DIR`, `TZ`. No authentication (single user, trusted network or protect the hostname with Cloudflare Access).
-- Releases: pushing tag `vX.Y.Z` builds linux/amd64 and pushes `mybadreligon/pricewatch:X.Y.Z`, `:X.Y`, `:latest`, then creates the GitHub release.
+- Releases: a push to `main` that changes `VERSION` runs `.github/workflows/release.yml`. It validates the CHANGELOG entry, fails if tag `vX.Y.Z` already exists, builds linux/amd64, pushes `mybadreligon/pricewatch:X.Y.Z`, `:X.Y`, `:latest`, then `gh release create vX.Y.Z --target $GITHUB_SHA` creates the tag and GitHub release. No tag push is needed. A `v*.*.*` tag push is a manual fallback only, and releases are serialized so a version is built once.
 
 ## 3. Price / change monitors
 - Fields: name, URL, selector type (`auto` | `css` | `regex` | `jsonpath`), selector, extra regex, render with headless browser, wait-for selector, custom user agent / headers / cookies, interval (minutes, min 1), enabled, screenshot capture, currency.

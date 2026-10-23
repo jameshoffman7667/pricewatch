@@ -38,10 +38,14 @@ volume, so it survives container rebuilds/restarts.
 
 Releases follow the home server standard flow. The version lives in `VERSION`
 and `CHANGELOG.md` (each entry has a short line of at most 50 characters and a
-long line of at most 250). Pushing a tag `vMAJOR.MINOR.PATCH` (for example
-`v0.1.0`) runs `.github/workflows/release.yml`, which validates the metadata,
-builds a `linux/amd64` image, pushes `mybadreligon/pricewatch:X.Y.Z`, `:X.Y`
-and `:latest`, then creates the GitHub release as its last step. Requires the
+long line of at most 250). **A release is just a commit pushed to `main`**:
+bump `VERSION`, add the matching `CHANGELOG.md` entry, update `deploy/`, push.
+`.github/workflows/release.yml` runs when `VERSION` changes, validates the
+metadata (it fails if tag `vX.Y.Z` already exists), builds a `linux/amd64`
+image, pushes `mybadreligon/pricewatch:X.Y.Z`, `:X.Y` and `:latest`, then runs
+`gh release create vX.Y.Z --target $GITHUB_SHA`, which also creates the tag.
+No tag is pushed by hand. Pushing a `vX.Y.Z` tag still works as a manual
+fallback, and the two paths cannot both release the same version. Requires the
 repo secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
 
 Every release leaves `deploy/compose.yaml` (image pinned to the exact version),
@@ -177,7 +181,7 @@ Dockerfile               non-root, tini, Playwright+Chromium baked in
 docker-compose.dev.yml   local compose file - builds from source
 deploy/                  compose.yaml, .env.example, RELEASE.md for the latest release
 docs/                    functional-spec.md, pending-changes.md
-.github/workflows/       release.yml: tag -> amd64 image -> GitHub release
+.github/workflows/       release.yml: push to main changing VERSION -> amd64 image -> tag + GitHub release
 ```
 
 ## Notes / limitations
