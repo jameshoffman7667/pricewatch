@@ -1,6 +1,6 @@
 # PriceWatch
 
-[![Build and publish Docker image](https://github.com/jameshoffman7667/pricewatch/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/jameshoffman7667/pricewatch/actions/workflows/docker-publish.yml)
+[![release](https://github.com/jameshoffman7667/pricewatch/actions/workflows/release.yml/badge.svg)](https://github.com/jameshoffman7667/pricewatch/actions/workflows/release.yml)
 [![Docker Hub](https://img.shields.io/badge/docker%20hub-mybadreligon%2Fpricewatch-blue)](https://hub.docker.com/r/mybadreligon/pricewatch)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -29,86 +29,28 @@ into one Docker container - with none of their paid-tier limits:
 docker compose -f docker-compose.dev.yml up -d --build
 ```
 
-Then open **http://localhost:8000**.
+Then open **http://localhost:5400**.
 
 Data (SQLite DB + screenshots) persists in the `pricewatch_data` Docker
 volume, so it survives container rebuilds/restarts.
 
-If you just want to run the published image instead of building locally,
-skip to [Deploying via Dockhand / docker compose](#deploying-via-dockhand--docker-compose) below.
+## Releases and deployment
 
-## Publishing: GitHub -> Docker Hub
+Releases follow the home server standard flow. The version lives in `VERSION`
+and `CHANGELOG.md` (each entry has a short line of at most 50 characters and a
+long line of at most 250). Pushing a tag `vMAJOR.MINOR.PATCH` (for example
+`v0.1.0`) runs `.github/workflows/release.yml`, which validates the metadata,
+builds a `linux/amd64` image, pushes `mybadreligon/pricewatch:X.Y.Z`, `:X.Y`
+and `:latest`, then creates the GitHub release as its last step. Requires the
+repo secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
 
-This repo ships with a GitHub Actions workflow
-(`.github/workflows/docker-publish.yml`) that builds a multi-arch
-(amd64 + arm64) image and pushes it to Docker Hub automatically.
+Every release leaves `deploy/compose.yaml` (image pinned to the exact version),
+`deploy/.env.example` and `deploy/RELEASE.md` (port, data folders, env vars,
+post-deploy checks, rollback). Deploy from those files; set `PORT_HOST` to the
+host port from the port register (container port = host port).
 
-1. **Create the GitHub repo and push this code.**
-
-   ```bash
-   git remote add origin https://github.com/jameshoffman7667/pricewatch.git
-   git branch -M main
-   git push -u origin main
-   ```
-
-2. **Create a Docker Hub access token**: Docker Hub -> Account Settings ->
-   Security -> **New Access Token** (read/write scope is enough).
-
-3. **Add two repo secrets** in GitHub: Settings -> Secrets and variables ->
-   Actions -> New repository secret.
-
-   | Secret | Value |
-   |---|---|
-   | `DOCKERHUB_USERNAME` | your Docker Hub username |
-   | `DOCKERHUB_TOKEN` | the access token from step 2 |
-
-4. **Push to `main`** (or push a tag like `v1.0.0` for a versioned release).
-   The workflow runs the test suite, then builds and pushes:
-   - `mybadreligon/pricewatch:latest` on every push to `main`
-   - `mybadreligon/pricewatch:1.0.0`, `:1.0`, `:1` on a `v1.0.0` tag
-   - `mybadreligon/pricewatch:sha-<shortsha>` on every build, for
-     traceability/rollback
-
-   Watch it run under the repo's **Actions** tab. Once it's green, the image
-   is live on Docker Hub at `hub.docker.com/r/mybadreligon/pricewatch`.
-
-`docker-compose.yml` already points at `mybadreligon/pricewatch` - no
-further edits needed once the image is published.
-
-You don't need to do any of this to run PriceWatch locally - the Quick
-Start above (build from source) works standalone. This section is only for
-publishing an image other machines (like your Dockhand host) can pull
-without a source checkout.
-
-## Deploying via Dockhand / docker compose
-
-Once the image is published to Docker Hub, deploy it anywhere docker compose
-runs - including as a Dockhand stack - with just `docker-compose.yml`
-(no source code needed on the target host):
-
-1. In Dockhand, create a new stack and paste in the contents of
-   `docker-compose.yml` from this repo (or point it at your Git repo if
-   Dockhand supports Git-based stacks).
-2. Set the stack's environment variables (or upload a `.env` based on
-   `.env.example`):
-   - `PRICEWATCH_IMAGE` - e.g. `<dockerhubuser>/pricewatch`
-   - `PRICEWATCH_TAG` - `latest`, or pin to a version like `1.0.0`
-   - `PRICEWATCH_PORT` - host port to expose (default `8000`)
-   - `TZ` - your timezone, e.g. `America/Toronto`
-3. Deploy the stack. Dockhand will pull the image and start the container;
-   the built-in healthcheck reports readiness once `/healthz` responds.
-4. Open `http://<host>:<PRICEWATCH_PORT>`.
-
-Data persists in the `pricewatch_data` named volume Dockhand creates for the
-stack. To upgrade later, bump `PRICEWATCH_TAG` (or re-pull `latest`) and
-redeploy the stack - your monitors and history are untouched.
-
-Plain docker compose works identically, without Dockhand:
-
-```bash
-cp .env.example .env   # edit PRICEWATCH_IMAGE to match what you published
-docker compose up -d
-```
+Data lives in `/data` (SQLite and screenshots) and the container runs as
+UID 1000 / GID 100, so the host folder must be writable by that user.
 
 ## Adding a monitor
 
@@ -175,7 +117,7 @@ POST   /api/deals/poll        # trigger an immediate feed poll
 Example: create a monitor programmatically
 
 ```bash
-curl -X POST http://localhost:8000/api/monitors \
+curl -X POST http://localhost:5400/api/monitors \
   -H 'Content-Type: application/json' \
   -d '{
         "name": "Headphones @ Example",
@@ -221,8 +163,6 @@ pip install pytest
 PRICEWATCH_DATA_DIR=./data pytest tests/ -v
 ```
 
-The same test command runs automatically in CI (`.github/workflows/docker-publish.yml`)
-on every push and pull request, before an image is built or pushed.
 
 ## Repo layout
 
@@ -231,11 +171,13 @@ app/                     FastAPI app, extraction/fetch/checker logic, templates
 app/rfd.py               RedFlagDeals fetch/parse (feed, thread detail, search)
 app/rfd_jobs.py          RFD ingest/refresh/related-deal/auto-monitor logic
 tests/                   pytest suite (incl. tests/fixtures/ for RFD parsing)
-Dockerfile               multi-stage-free image w/ Playwright+Chromium baked in
-docker-compose.yml       production compose file - pulls the published image (Dockhand-ready)
+VERSION                  single source of truth for the version
+CHANGELOG.md             release history (short + long text per version)
+Dockerfile               non-root, tini, Playwright+Chromium baked in
 docker-compose.dev.yml   local compose file - builds from source
-.env.example             config vars for docker-compose.yml
-.github/workflows/       CI: test, then build+push multi-arch image to Docker Hub
+deploy/                  compose.yaml, .env.example, RELEASE.md for the latest release
+docs/                    functional-spec.md, pending-changes.md
+.github/workflows/       release.yml: tag -> amd64 image -> GitHub release
 ```
 
 ## Notes / limitations

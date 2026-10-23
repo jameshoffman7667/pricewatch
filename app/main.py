@@ -18,11 +18,12 @@ from .checker import run_check
 from .db import engine, init_db, get_session, SCREENSHOT_DIR
 from .models import Monitor, NotificationChannel, RfdDeal, RfdRelatedDeal, Snapshot
 from .notify import send_notification
+from .version import __version__
 from .scheduler import load_all_and_start, schedule_monitor, unschedule_monitor, run_monitor_job, scheduler
 
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="PriceWatch", description="Self-hosted price & page change monitor")
+app = FastAPI(title="PriceWatch", description="Self-hosted price & page change monitor", version=__version__)
 templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.mount("/screenshots", StaticFiles(directory=SCREENSHOT_DIR), name="screenshots")
@@ -472,4 +473,11 @@ def api_delete_monitor(monitor_id: int):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok"}
+    # Cheap DB reachability check; returns {status, version} per the home server spec.
+    try:
+        with Session(engine) as session:
+            session.exec(select(NotificationChannel).limit(1)).first()
+    except Exception as exc:  # noqa: BLE001
+        logging.getLogger(__name__).error("healthz: database check failed: %s", exc)
+        return JSONResponse({"status": "error", "version": __version__}, status_code=503)
+    return {"status": "ok", "version": __version__}

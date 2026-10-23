@@ -1,0 +1,26 @@
+services:
+  pricewatch:
+    image: mybadreligon/pricewatch:0.1.0
+    container_name: pricewatch
+    restart: unless-stopped
+    user: "1000:100"
+    environment:
+      - TZ=America/Toronto
+      - PORT=${PORT_HOST:?assign from port register}
+      - PRICEWATCH_DATA_DIR=/data
+    ports:
+      - "${PORT_HOST}:${PORT_HOST}"          # container port = host port
+    volumes:
+      - ${FAST_STORAGE:-/srv/dev-disk-by-uuid-758425e9-f9ca-4fbc-ad81-eaea80fdfb73/appdata-ssd}/pricewatch:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:$${PORT}/healthz >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

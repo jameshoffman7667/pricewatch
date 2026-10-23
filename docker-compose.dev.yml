@@ -1,23 +1,19 @@
-# Local development / testing compose file: builds the image from source
-# instead of pulling from Docker Hub. Use this while iterating on the code.
-#
+# Local development only: builds the image from source.
 #   docker compose -f docker-compose.dev.yml up -d --build
-#
-# For a normal deployment (e.g. via Dockhand), use docker-compose.yml
-# instead, which pulls the published image.
+# Servers use deploy/compose.yaml (pulls the released image).
 services:
   pricewatch:
     build: .
     image: pricewatch:dev
-    container_name: pricewatch
-    restart: unless-stopped
+    container_name: pricewatch-dev
     ports:
-      - "8000:8000"
+      - "5400:5400"
     volumes:
       - pricewatch_data:/data
     environment:
+      - PORT=5400
       - PRICEWATCH_DATA_DIR=/data
-      - TZ=${TZ:-UTC}
+      - TZ=America/Toronto
 
 volumes:
   pricewatch_data:
