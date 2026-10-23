@@ -3,6 +3,7 @@ Image: mybadreligon/pricewatch:0.1.0   (built by the v0.1.0 tag workflow)
 Short: Add release flow, health version, port 5400
 Long: First versioned release: tag workflow builds amd64 image X.Y.Z, X.Y, latest and creates the GitHub release. Non-root tini image, /healthz returns version, PORT env, RFD deals feed, deploy/ files.
 Release commit: see `git log -1` on main (the commit that adds VERSION 0.1.0)        Tag pushed from authoring session: no (Claude Code pushes it)
+Update: later
 Type: minor (baseline; first versioned release, nothing was tagged before)
 Port: TBD (assign from the port register; 8070-8099 range). Dev default 5400 was requested earlier by James: confirm. Exception: none
 Public hostname: none yet (needed only for PWA installability; see P-1)        Needs Caddy route: no, until a hostname is chosen
