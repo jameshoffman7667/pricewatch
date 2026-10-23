@@ -5,7 +5,7 @@ Long: Release workflow now runs when a push to main changes VERSION: it validate
 Release commit: HEAD of main when VERSION changed to 0.1.2        Tag: created by the release workflow (gh release create --target), nobody pushes it
 Update: later
 Type: patch
-Port: 8071 proposed (next free after finance-hub 8070; host = container; James to confirm). 5400 is only the local dev default and is outside the server port standard. Exception: none
+Port: 8071 (confirmed by James; next free after finance-hub 8070; host = container). 5400 is only the local dev default and is outside the server port standard. Exception: none
 Public hostname: none yet (needed only for PWA installability; see P-1)        Needs Caddy route: no, until a hostname is chosen
 New or changed env vars: PORT (new, host=container), PRICEWATCH_DATA_DIR, TZ. No secrets.
 Data: /data (SQLite pricewatch.db + screenshots/). Create the host folder `<FAST_STORAGE>/pricewatch` owned by UID 1000 / GID 100. Migration: none (tables created on start; RFD tables are added automatically).
